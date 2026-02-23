@@ -1,185 +1,38 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle Operacional Mobile</title>
-
-<style>
-/* ===== BODY ===== */
-body{
-    font-family: Arial, sans-serif;
-    background: #dff5e1; /* VERDE CLARO */
-    margin: 0;
-    padding: 10px;
-}
-
-/* ===== CABEÇALHOS ===== */
-h1{
-    text-align: center;
-    color: #1b4332;
-    margin-bottom: 20px;
-}
-h2{
-    border-bottom: 2px solid #cce3d4;
-    padding-bottom: 5px;
-    color: #2d6a4f;
-    font-size: 20px;
-    margin-top: 0;
-}
-h3{
-    color: #40916c;
-    font-size: 18px;
-    margin-bottom: 5px;
-}
-
-/* ===== INPUTS E SELECTS ===== */
-input, select{
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 8px;
-    border: 1px solid #b7e4c7;
-    font-size: 16px;
-    box-sizing: border-box;
-}
-
-/* ===== BOTÕES ===== */
-button{
-    background: #2d6a4f;
-    color: #fff;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background 0.3s;
-}
-button:hover{
-    background: #1b4332;
-}
-button.delete-btn{
-    background: #d00000;
-    padding: 6px 10px;
-    border-radius: 6px;
-    width: auto;
-}
-button.delete-btn:hover{
-    background: #9d0208;
-}
-
-/* ===== CONTAINERS ===== */
-div.container{
-    background: #ffffff; /* CONTÊINER BRANCO */
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 12px;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-}
-
-/* ===== LISTAS ===== */
-.lista{
-    background: #f8fff9;
-    border: 1px solid #d8f3dc;
-    max-height: 250px;
-    overflow-y: auto;
-    border-radius: 8px;
-    padding: 10px;
-}
-.log-item{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #e9f5ec;
-    transition: background 0.2s;
-}
-.log-item span{
-    cursor: pointer;
-}
-.log-item:hover{
-    background: #edfdf1;
-}
-
-/* ===== QR ===== */
-#qr-reader{
-    width: 100%;
-    margin: 10px 0;
-    border: 1px solid #b7e4c7;
-    border-radius: 8px;
-    display: none;
-}
-</style>
-</head>
-
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Controle Operacional Mobile</title><style>body{font-family:"Segoe UI",Arial,sans-serif;background:#111;margin:0;padding:12px;color:#EAEAEA;}h1{text-align:center;font-weight:600;letter-spacing:1px;margin-bottom:25px;}h2{border-bottom:1px solid #2A2A2A;padding-bottom:6px;margin-bottom:15px;font-size:18px;color:#8BC34A;text-transform:uppercase;}h3{color:#BDBDBD;font-size:15px;margin-bottom:8px;}input,select{width:100%;padding:10px;margin:8px 0;background:#1A1A1A;border:1px solid #2A2A2A;color:#EAEAEA;font-size:15px;border-radius:4px;box-sizing:border-box;}input:focus,select:focus{outline:none;border-color:#2D6A4F;}button{background:#2D6A4F;color:#fff;border:1px solid #2D6A4F;padding:8px 14px;margin-top:6px;cursor:pointer;font-size:14px;border-radius:4px;text-transform:uppercase;}button:hover{background:#1B4332;}button.delete-btn{background:#7A1E1E;border:1px solid #7A1E1E;padding:4px 8px;font-size:12px;border-radius:3px;width:auto;}button.delete-btn:hover{background:#5A1414;}div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px solid #2A2A2A;border-radius:4px;}.lista{background:#141414;border:1px solid #2A2A2A;max-height:250px;overflow-y:auto;padding:5px;}.log-item{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid #222;font-size:14px;}.log-item:last-child{border-bottom:none;}#qr-reader{width:100%;margin:10px 0;border:1px solid #2A2A2A;display:none;}#loginContainer{max-width:300px;margin:50px auto;}</style></head>
 <body>
-
-<h1>Controle Operacional</h1>
-
-<div class="container">
-<h2>Motoristas</h2>
-<input type="text" id="motoristaInput" placeholder="Nome do motorista">
-<button onclick="addMotorista()">Adicionar</button>
-<div id="listaMotoristas" class="lista"></div>
-</div>
-
-<div class="container">
-<h2>Carregamentos</h2>
-<select id="motoristaSelect"></select>
-<input type="text" id="bobinaInput" placeholder="Código da bobina ou QR">
-<button onclick="addBobina()">Adicionar Bobina</button>
-<div id="listaBobinas" class="lista"></div>
-<button onclick="finalizarCarregamento()">Finalizar Carregamento</button>
-
-<h3>Leitura QR / Código de Barras</h3>
-<button onclick="toggleCamera()">Abrir / Fechar Câmera</button>
-<div id="qr-reader"></div>
-</div>
-
-<div class="container">
-<h2>Logs</h2>
-<select id="filtroMotorista" onchange="atualizarLogs()">
-<option value="">Todos os motoristas</option>
-</select>
-<div id="listaLogs" class="lista"></div>
-</div>
-
-<div class="container">
-<h2>📊 Movimentação</h2>
-<h3>🚚 Carregamentos</h3>
-<p>Hoje: <strong id="carHoje">0</strong></p>
-<p>Ontem: <strong id="carOntem">0</strong></p>
-<p>Anteontem: <strong id="carAnteontem">0</strong></p>
-
-<h3>📦 Bobinas</h3>
-<p>Hoje: <strong id="bobHoje">0</strong></p>
-<p>Ontem: <strong id="bobOntem">0</strong></p>
-<p>Anteontem: <strong id="bobAnteontem">0</strong></p>
-</div>
-
-<div class="container">
-<h2>Administração</h2>
-<button onclick="resetarDadosProtegido()">Resetar Dados</button>
-</div>
+<div id="loginContainer"><h1>Login Operador</h1><input type="text" id="loginNome" placeholder="Nome completo"><input type="text" id="loginCPF" placeholder="CPF (somente números)"><button onclick="fazerLogin()">Entrar</button></div>
+<div id="app" style="display:none;"><h1>Controle Operacional</h1>
+<div class="container"><h2>Motoristas</h2><input type="text" id="motoristaInput" placeholder="Nome do motorista"><button onclick="addMotorista()">Adicionar</button><div id="listaMotoristas" class="lista"></div></div>
+<div class="container"><h2>Carregamentos</h2><select id="motoristaSelect"></select><input type="text" id="bobinaInput" placeholder="Código da bobina ou QR"><button onclick="addBobina()">Adicionar Bobina</button><div id="listaBobinas" class="lista"></div><button onclick="finalizarCarregamento()">Finalizar Carregamento</button><h3>Leitura QR / Código de Barras</h3><button onclick="toggleCamera()">Abrir / Fechar Câmera</button><div id="qr-reader"></div></div>
+<div class="container"><h2>Logs</h2><input type="date" id="dataExportacao"><button onclick="exportarLogsPorDia()">Exportar Logs do Dia (TXT)</button><select id="filtroMotorista" onchange="atualizarLogs()"><option value="">Todos os motoristas</option></select><div id="listaLogs" class="lista"></div></div>
+<div class="container"><h2>Movimentação</h2><h3>Carregamentos</h3><p>Hoje: <strong id="carHoje">0</strong></p><p>Ontem: <strong id="carOntem">0</strong></p><p>Anteontem: <strong id="carAnteontem">0</strong></p><h3>Bobinas</h3><p>Hoje: <strong id="bobHoje">0</strong></p><p>Ontem: <strong id="bobOntem">0</strong></p><p>Anteontem: <strong id="bobAnteontem">0</strong></p></div>
+<div class="container"><h2>Administração</h2><button onclick="resetarDadosProtegido()">Resetar Dados (Senha 1234)</button></div></div>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
-
 <script>
-/* LÓGICA ORIGINAL CONTINUA EXATAMENTE IGUAL */
-let estado={motoristas:[],carregamentos:[]};
-let bobinasTemp=[];
-let editandoIndex=null;
-let html5QrCode=null;
-let camAberta=false;
-
-function salvar(){localStorage.setItem("controleOperacional",JSON.stringify(estado))}
-function carregar(){const dados=localStorage.getItem("controleOperacional");if(dados) estado=JSON.parse(dados)}
-function formatarDataHora(dataISO){const d=new Date(dataISO);const data=d.toLocaleDateString("pt-BR");const hora=d.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'});return {data,hora};}
+let estado={motoristas:[],carregamentos:[]},bobinasTemp=[],editandoIndex=null,html5QrCode=null,camAberta=false,operador={nome:'',cpf:''};
+function fazerLogin(){const n=document.getElementById("loginNome").value.trim(),c=document.getElementById("loginCPF").value.trim();if(!n||!c)return alert("Informe nome e CPF!");operador={nome:n,cpf:c};document.getElementById("loginContainer").style.display="none";document.getElementById("app").style.display="block";}
+function salvar(){localStorage.setItem("controleOperacional",JSON.stringify(estado));}
+function carregar(){const d=localStorage.getItem("controleOperacional");if(d)estado=JSON.parse(d);}
+function formatarDataHora(d){const D=new Date(d);return{data:D.toLocaleDateString("pt-BR"),hora:D.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'})};}
 function formatarData(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');}
-function extrairCodigo(input){try{let url=new URL(input);return (url.searchParams.get("pO")||input).trim().toUpperCase();}catch{return input.trim().toUpperCase();}}
-
-/* resto da lógica permanece igual */
-</script>
-
-</body>
-</html>
+function extrairCodigo(i){try{let u=new URL(i);return(u.searchParams.get("pO")||i).trim().toUpperCase();}catch{return i.trim().toUpperCase();}}
+function exportarLogsPorDia(){const data=document.getElementById("dataExportacao").value;if(!data)return alert("Selecione uma data.");const logs=estado.carregamentos.filter(c=>formatarData(new Date(c.data))===data);if(logs.length===0)return alert("Nenhum log encontrado.");let txt="CONTROLE OPERACIONAL\nData: "+data+"\nOperador: "+operador.nome+"\nCPF: "+operador.cpf+"\n------------------------------------\n\n";logs.forEach((c,i)=>{const {hora}=formatarDataHora(c.data);txt+=`${i+1}º Registro\nMotorista: ${c.motorista.normalize("NFC")}\nBobinas: ${c.bobinas.map(b=>b.normalize("NFC")).join(", ")}\nHorário: ${hora}\n------------------------------------\n\n`;});const bom=new Uint8Array([0xEF,0xBB,0xBF]);const blob=new Blob([bom,txt],{type:"text/plain;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`logs_${data}.txt`;document.body.appendChild(link);link.click();document.body.removeChild(link);}
+function addMotorista(){const n=document.getElementById("motoristaInput").value.trim();if(!n)return alert("Digite nome válido.");if(estado.motoristas.includes(n))return alert("Motorista já existe.");estado.motoristas.push(n);document.getElementById("motoristaInput").value="";salvar();atualizarTudo();}
+function excluirMotorista(n){if(estado.carregamentos.some(c=>c.motorista===n))return alert("Motorista possui carregamentos.");if(!confirm("Excluir motorista?"))return;estado.motoristas=estado.motoristas.filter(m=>m!==n);salvar();atualizarTudo();}
+function atualizarMotoristasUI(){const l=document.getElementById("listaMotoristas"),s=document.getElementById("motoristaSelect"),f=document.getElementById("filtroMotorista");l.innerHTML="";s.innerHTML="";f.innerHTML='<option value="">Todos os motoristas</option>';estado.motoristas.forEach(m=>{l.innerHTML+=`<div class="log-item"><span>${m}</span><button class="delete-btn" onclick="excluirMotorista('${m}')">X</button></div>`;s.innerHTML+=`<option value="${m}">${m}</option>`;f.innerHTML+=`<option value="${m}">${m}</option>`;});}
+function addBobina(){let i=document.getElementById("bobinaInput").value.trim();if(!i)return alert("Digite código válido.");let c=extrairCodigo(i);if(bobinasTemp.includes(c))return alert("Bobina já adicionada.");bobinasTemp.push(c);document.getElementById("bobinaInput").value="";atualizarBobinasUI();}
+function atualizarBobinasUI(){const l=document.getElementById("listaBobinas");l.innerHTML="";bobinasTemp.forEach((b,i)=>{l.innerHTML+=`${b} <button class="delete-btn" onclick="removerBobinaTemp(${i})">X</button><br>`;});}
+function removerBobinaTemp(i){bobinasTemp.splice(i,1);atualizarBobinasUI();}
+function finalizarCarregamento(){const m=document.getElementById("motoristaSelect").value;if(!m)return alert("Selecione motorista.");if(bobinasTemp.length===0)return alert("Adicione bobinas.");const r={motorista:m,data:new Date().toISOString(),bobinas:[...bobinasTemp],operador:{...operador}};if(editandoIndex!==null){estado.carregamentos[editandoIndex]=r;editandoIndex=null;}else{estado.carregamentos.push(r);}bobinasTemp=[];salvar();atualizarTudo();}
+function atualizarLogs(){const l=document.getElementById("listaLogs");const f=document.getElementById("filtroMotorista").value;l.innerHTML="";estado.carregamentos.filter(c=>!f||c.motorista===f).forEach((c,i)=>{const {data,hora}=formatarDataHora(c.data);const idx=estado.carregamentos.indexOf(c);l.innerHTML+=`<div class="log-item"><span onclick="abrirCarregamento(${idx})">${i+1}º | ${c.motorista} | ${c.bobinas.join(", ")} | ${data} ${hora}</span><button class="delete-btn" onclick="excluirCarregamento(${idx})">X</button></div>`;});}
+function abrirCarregamento(i){const c=estado.carregamentos[i];editandoIndex=i;bobinasTemp=[...c.bobinas];document.getElementById("motoristaSelect").value=c.motorista;atualizarBobinasUI();}
+function excluirCarregamento(i){if(!confirm("Excluir carregamento?"))return;estado.carregamentos.splice(i,1);salvar();atualizarTudo();}
+function atualizarPainel(){const h=new Date(),o=new Date();o.setDate(h.getDate()-1);const a=new Date();a.setDate(h.getDate()-2);function contar(d){const k=formatarData(d);let car=0,bob=0;estado.carregamentos.forEach(c=>{if(formatarData(new Date(c.data))===k){car++;bob+=c.bobinas.length;}});return{car,bob};}let H=contar(h),O=contar(o),A=contar(a);document.getElementById("carHoje").innerText=H.car;document.getElementById("carOntem").innerText=O.car;document.getElementById("carAnteontem").innerText=A.car;document.getElementById("bobHoje").innerText=H.bob;document.getElementById("bobOntem").innerText=O.bob;document.getElementById("bobAnteontem").innerText=A.bob;}
+function iniciarQR(){if(!html5QrCode)html5QrCode=new Html5Qrcode("qr-reader");html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},msg=>{document.getElementById("bobinaInput").value=extrairCodigo(msg);toggleCamera();});}
+function toggleCamera(){const r=document.getElementById("qr-reader");if(camAberta){html5QrCode.stop().then(()=>{r.style.display="none";camAberta=false});}else{r.style.display="block";iniciarQR();camAberta=true;}}
+function resetarDadosProtegido(){const s=prompt("Senha:");if(s!=="1234")return alert("Senha incorreta.");localStorage.removeItem("controleOperacional");estado={motoristas:[],carregamentos:[]};bobinasTemp=[];editandoIndex=null;atualizarTudo();}
+function atualizarTudo(){atualizarMotoristasUI();atualizarLogs();atualizarBobinasUI();atualizarPainel();}
+carregar();atualizarTudo();
+</script></body></html>
