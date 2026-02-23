@@ -21,6 +21,8 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 .log-item:last-child{border-bottom:none;}
 #qr-reader{width:100%;margin:10px 0;border:1px solid #2A2A2A;display:none;}
 #loginContainer{max-width:300px;margin:50px auto;}
+.flex-row{display:flex;align-items:center;}
+.flex-row input{margin-right:5px;}
 </style>
 </head>
 <body>
@@ -37,16 +39,13 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <div id="app" style="display:none;">
 <h1>Controle Operacional</h1>
 
-<!-- Motoristas Minimizável -->
+<!-- Motoristas -->
 <div class="container" id="motoristasContainer">
   <h2>
     Motoristas
-    <button onclick="toggleMotoristas()" 
-            style="float:right; background:#2D6A4F; border:none; color:#fff; border-radius:50%; width:24px; height:24px; cursor:pointer; font-weight:bold; line-height:20px; text-align:center; padding:0;">
-      -
-    </button>
+    <button onclick="toggleMotoristas()" style="float:right;width:24px;height:24px;border:none;border-radius:50%;font-weight:bold;line-height:20px;text-align:center;padding:0;">-</button>
   </h2>
-  <div id="motoristasContent" style="overflow:hidden; transition: max-height 0.3s ease; max-height:500px;">
+  <div id="motoristasContent" style="overflow:hidden;transition:max-height 0.3s ease;max-height:500px;">
     <input type="text" id="motoristaInput" placeholder="Nome do motorista">
     <button onclick="addMotorista()">Adicionar</button>
     <div id="listaMotoristas" class="lista"></div>
@@ -57,7 +56,7 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <div class="container">
 <h2>Carregamentos</h2>
 <select id="motoristaSelect"></select>
-<input type="text" id="bobinaInput" placeholder="Código da bobina ou QR (use vírgula para múltiplos)">
+<input type="text" id="bobinaInput" placeholder="Código da bobina ou QR (use vírgula para múltiplos)" onfocus="campoAtivo=this">
 <button onclick="addBobina()">Adicionar Bobina(s)</button>
 <div id="listaBobinas" class="lista"></div>
 <button onclick="finalizarCarregamento()">Finalizar Carregamento</button>
@@ -106,6 +105,7 @@ let editandoIndex=null;
 let html5QrCode=null;
 let camAberta=false;
 let operador={nome:'',cpf:''};
+let campoAtivo=null;
 
 /* ===== LOGIN ===== */
 function fazerLogin(){
@@ -113,8 +113,10 @@ function fazerLogin(){
     const cpf=document.getElementById("loginCPF").value.trim();
     if(!nome||!cpf) return alert("Informe nome e CPF!");
     operador={nome,cpf};
-    const dadosUsuario = localStorage.getItem(`user_${cpf}`);
-    estado = dadosUsuario ? JSON.parse(dadosUsuario) : {motoristas:[],carregamentos:[]};
+    try{
+        const dadosUsuario = localStorage.getItem(`user_${cpf}`);
+        estado = dadosUsuario ? JSON.parse(dadosUsuario) : {motoristas:[],carregamentos:[]};
+    }catch(e){estado={motoristas:[],carregamentos:[]};}
     document.getElementById("loginContainer").style.display="none";
     document.getElementById("app").style.display="block";
     atualizarTudo();
@@ -133,13 +135,14 @@ function atualizarMotoristasUI(){const lista=document.getElementById("listaMotor
 
 /* ===== BOBINAS ===== */
 function addBobina(){
-    let input=document.getElementById("bobinaInput").value.trim();
-    if(!input) return alert("Digite código válido.");
-    const entradas=input.split(",").map(c=>extrairCodigo(c.trim())).filter(c=>c);
+    let input=campoAtivo||document.getElementById("bobinaInput");
+    let valor=input.value.trim();
+    if(!valor) return alert("Digite código válido.");
+    const entradas=valor.split(",").map(c=>extrairCodigo(c.trim())).filter(c=>c);
     entradas.forEach(codigo=>{
         if(!bobinasTemp.some(b=>b.codigo===codigo)) bobinasTemp.push({codigo,lote:"",obs:""});
     });
-    document.getElementById("bobinaInput").value="";
+    input.value="";
     atualizarBobinasUI();
 }
 
@@ -148,10 +151,10 @@ function atualizarBobinasUI(){
     lista.innerHTML="";
     bobinasTemp.forEach((b,i)=>{
         lista.innerHTML+=`
-        <div class="log-item">
-            <span style="flex:1">${b.codigo}</span>
-            <input type="text" placeholder="Lote" value="${b.lote}" onchange="bobinasTemp[${i}].lote=this.value" style="width:80px;margin-right:5px">
-            <input type="text" placeholder="Obs" value="${b.obs}" onchange="bobinasTemp[${i}].obs=this.value" style="flex:1;margin-right:5px">
+        <div class="log-item flex-row">
+            <input type="text" placeholder="Código" value="${b.codigo}" style="flex:1" onfocus="campoAtivo=this" readonly>
+            <input type="text" placeholder="Lote" value="${b.lote}" style="width:80px;margin-left:5px" onchange="bobinasTemp[${i}].lote=this.value" onfocus="campoAtivo=this">
+            <input type="text" placeholder="Obs" value="${b.obs}" style="flex:1;margin-left:5px" onchange="bobinasTemp[${i}].obs=this.value" onfocus="campoAtivo=this">
             <button class="delete-btn" onclick="removerBobinaTemp(${i})">X</button>
         </div>`;
     });
@@ -160,11 +163,10 @@ function removerBobinaTemp(i){bobinasTemp.splice(i,1);atualizarBobinasUI();}
 
 /* ===== CARREGAMENTOS ===== */
 function finalizarCarregamento(){
-    const motorista=document.getElementById("motoristaSelect").value;
-    if(!motorista) return alert("Selecione motorista.");
+    if(!document.getElementById("motoristaSelect").value) return alert("Selecione motorista.");
     if(bobinasTemp.length===0) return alert("Adicione bobinas.");
-    const registro={motorista,data:new Date().toISOString(),bobinas:[...bobinasTemp],operador:{...operador}};
-    if(editandoIndex!==null){estado.carregamentos[editandoIndex]=registro;editandoIndex=null;}
+    const registro={motorista:document.getElementById("motoristaSelect").value,data:new Date().toISOString(),bobinas:[...bobinasTemp],operador:{...operador}};
+    if(editandoIndex!==null){estado.carregamentos[editandoIndex]=registro;editandoIndex=null;} 
     else{estado.carregamentos.push(registro);}
     bobinasTemp=[];
     salvar();
@@ -177,36 +179,25 @@ function atualizarLogs(){
     const filtro=document.getElementById("filtroMotorista").value;
     lista.innerHTML="";
     let filtrados = estado.carregamentos;
-    if(filtro) filtrados = filtrados.filter(c => c.motorista===filtro);
+    if(filtro) filtrados=filtrados.filter(c=>c.motorista===filtro);
     filtrados.forEach((c,i)=>{
         const {data,hora}=formatarDataHora(c.data);
-        let texto=`${i+1}º | ${c.motorista} | ${c.bobinas.map(b=>b.codigo).join(", ")} | ${data} ${hora}`;
-        const indexOriginal = estado.carregamentos.indexOf(c);
-        lista.innerHTML+=`<div class="log-item"><span style="flex:1; cursor:pointer" onclick="abrirCarregamento(${indexOriginal})">${texto}</span><button class="delete-btn" onclick="excluirCarregamento(${indexOriginal})">X</button></div>`;
+        lista.innerHTML+=`<div class="log-item"><span style="flex:1;cursor:pointer" onclick="abrirCarregamento(${i})">${i+1}º | ${c.motorista} | ${c.bobinas.map(b=>b.codigo).join(", ")} | ${data} ${hora}</span><button class="delete-btn" onclick="excluirCarregamento(${i})">X</button></div>`;
     });
 }
 
 /* ===== ABRIR / EXCLUIR CARREGAMENTO ===== */
-function abrirCarregamento(i){
-    const c=estado.carregamentos[i];
-    editandoIndex=i;
-    bobinasTemp=[...c.bobinas];
-    document.getElementById("motoristaSelect").value=c.motorista;
-    atualizarBobinasUI();
-}
+function abrirCarregamento(i){editandoIndex=i; bobinasTemp=[...estado.carregamentos[i].bobinas]; document.getElementById("motoristaSelect").value=estado.carregamentos[i].motorista; atualizarBobinasUI();}
 function excluirCarregamento(i){if(!confirm("Excluir carregamento?"))return;estado.carregamentos.splice(i,1);salvar();atualizarTudo();}
 
 /* ===== PAINEL ===== */
 function atualizarPainel(){
-    const hoje=new Date();
-    const ontem=new Date();ontem.setDate(hoje.getDate()-1);
-    const anteontem=new Date();anteontem.setDate(hoje.getDate()-2);
-    function contar(data){
-        const chave=formatarData(data);
+    const hoje=new Date(),ontem=new Date(),anteontem=new Date();
+    ontem.setDate(hoje.getDate()-1);anteontem.setDate(hoje.getDate()-2);
+    function contar(d){
+        const chave=formatarData(d);
         let car=0,bob=0;
-        estado.carregamentos.forEach(c=>{
-            if(formatarData(new Date(c.data))===chave){car++;bob+=c.bobinas.length;}
-        });
+        estado.carregamentos.forEach(c=>{if(formatarData(new Date(c.data))===chave){car++;bob+=c.bobinas.length;}});
         return {car,bob};
     }
     let h=contar(hoje),o=contar(ontem),a=contar(anteontem);
@@ -217,93 +208,54 @@ function atualizarPainel(){
 /* ===== QR ===== */
 function iniciarQR(){
     if(!html5QrCode) html5QrCode=new Html5Qrcode("qr-reader");
-    html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},
-        msg=>{
-            const codigo = extrairCodigo(msg);
-            const input = document.getElementById("bobinaInput");
-            let valores = input.value.split(",").map(v=>v.trim()).filter(v=>v);
+    html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},msg=>{
+        const codigo = extrairCodigo(msg);
+        if(campoAtivo){
+            let valores = campoAtivo.value.split(",").map(v=>v.trim()).filter(v=>v);
             if(!valores.includes(codigo)) valores.push(codigo);
-            input.value = valores.join(", ");
-            toggleCamera();
+            campoAtivo.value = valores.join(", ");
+            campoAtivo.onchange?.();
         }
-    );
+    });
 }
 function toggleCamera(){const reader=document.getElementById("qr-reader");if(camAberta){html5QrCode.stop().then(()=>{reader.style.display="none";camAberta=false});}else{reader.style.display="block";iniciarQR();camAberta=true;}}
 
 /* ===== RESET ===== */
-function resetarDadosProtegido(){
-    const senha=prompt("Senha:");
-    if(senha!=="1234") return alert("Senha incorreta.");
-    localStorage.removeItem(`user_${operador.cpf}`);
-    estado={motoristas:[],carregamentos:[]};
-    bobinasTemp=[];
-    editandoIndex=null;
-    atualizarTudo();
-}
+function resetarDadosProtegido(){const senha=prompt("Senha:");if(senha!=="1234") return alert("Senha incorreta."); localStorage.removeItem(`user_${operador.cpf}`); estado={motoristas:[],carregamentos:[]}; bobinasTemp=[]; editandoIndex=null; atualizarTudo();}
 
 /* ===== MOTORISTAS MINIMIZÁVEL ===== */
-function toggleMotoristas(){
-    const content=document.getElementById("motoristasContent");
-    const btn=content.previousElementSibling.querySelector("button");
-    if(content.style.maxHeight===""||content.style.maxHeight==="0px"){content.style.maxHeight=content.scrollHeight+"px";btn.innerText="-";} 
-    else{content.style.maxHeight="0px";btn.innerText="+";}
-}
+function toggleMotoristas(){const content=document.getElementById("motoristasContent"); const btn=content.previousElementSibling.querySelector("button"); if(content.style.maxHeight===""||content.style.maxHeight==="0px"){content.style.maxHeight=content.scrollHeight+"px";btn.innerText="-";} else{content.style.maxHeight="0px";btn.innerText="+";}}
 
-function atualizarTudo(){atualizarMotoristasUI();atualizarLogs();atualizarBobinasUI();atualizarPainel();}
-
-/* ===== EXPORTAR E COMPARTILHAR ===== */
+/* ===== EXPORTAR / COMPARTILHAR LOGS ===== */
 function exportarLogsPorDia(){
     const dataSelecionada=document.getElementById("dataExportacao").value;
     if(!dataSelecionada) return alert("Selecione uma data.");
-    const logsFiltrados=estado.carregamentos.filter(c=>formatarData(new Date(c.data))===dataSelecionada);
-    if(logsFiltrados.length===0) return alert("Nenhum log encontrado.");
-    
-    let texto = `TRACKOPS - CONTROLE OPERACIONAL\nData: ${dataSelecionada}\nOperador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
-    texto += "------------------------------------\n\n";
-    
-    logsFiltrados.forEach((c,i)=>{
-        const dh = formatarDataHora(c.data);
-        texto += `${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.map(b=>b.codigo).join(", ")}`;
-        c.bobinas.forEach(b=>{
-            if(b.lote) texto += `\nLote: ${b.lote}`;
-            if(b.obs) texto += `\nObs: ${b.obs}`;
-        });
-        texto += `\nHorário: ${dh.data} ${dh.hora}\n------------------------------------\n\n`;
-    });
-    
-    const blob = new Blob([texto],{type:"text/plain;charset=utf-8"});
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `logs_${dataSelecionada}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function compartilharLogs(){
-    let logsFiltrados=estado.carregamentos;
-    const filtro=document.getElementById("filtroMotorista").value;
-    if(filtro) logsFiltrados=logsFiltrados.filter(c=>c.motorista===filtro);
-    if(logsFiltrados.length===0) return alert("Nenhum log para compartilhar.");
-    let texto="TRACKOPS - CONTROLE OPERACIONAL\n";
-    texto+=`Operador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
-    texto+="------------------------------------\n\n";
-    logsFiltrados.forEach((c,i)=>{
+    const logs=estado.carregamentos.filter(c=>formatarData(new Date(c.data))===dataSelecionada);
+    if(logs.length===0) return alert("Nenhum log encontrado.");
+    let texto=`TRACKOPS - CONTROLE OPERACIONAL\nData: ${dataSelecionada}\nOperador: ${operador.nome}\nCPF: ${operador.cpf}\n------------------------------------\n\n`;
+    logs.forEach((c,i)=>{
         const {data,hora}=formatarDataHora(c.data);
         texto+=`${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.map(b=>b.codigo).join(", ")}`;
-        c.bobinas.forEach(b=>{
-            if(b.lote) texto += `\nLote: ${b.lote}`;
-            if(b.obs) texto += `\nObs: ${b.obs}`;
-        });
-        texto += `\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
+        c.bobinas.forEach(b=>{if(b.lote) texto+=`\nLote: ${b.lote}`; if(b.obs) texto+=`\nObs: ${b.obs}`;});
+        texto+=`\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
     });
-    if(navigator.share){
-        navigator.share({title:"Logs TrackOps", text:texto})
-            .then(()=>console.log("Compartilhamento concluído"))
-            .catch(err=>console.error("Erro ao compartilhar:",err));
-    }else{alert("Seu navegador não suporta compartilhamento direto. Copie o texto:\n\n"+texto);}
+    const blob=new Blob([texto],{type:"text/plain;charset=utf-8"}); const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`logs_${dataSelecionada}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
-</script>
+function compartilharLogs(){
+    let logs=estado.carregamentos;
+    const filtro=document.getElementById("filtroMotorista").value; if(filtro) logs=logs.filter(c=>c.motorista===filtro);
+    if(logs.length===0) return alert("Nenhum log para compartilhar.");
+    let texto=`TRACKOPS - CONTROLE OPERACIONAL\nOperador: ${operador.nome}\nCPF: ${operador.cpf}\n------------------------------------\n\n`;
+    logs.forEach((c,i)=>{
+        const {data,hora}=formatarDataHora(c.data);
+        texto+=`${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.map(b=>b.codigo).join(", ")}`;
+        c.bobinas.forEach(b=>{if(b.lote) texto+=`\nLote: ${b.lote}`; if(b.obs) texto+=`\nObs: ${b.obs}`;});
+        texto+=`\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
+    });
+    if(navigator.share){navigator.share({title:"Logs TrackOps",text:texto}).then(()=>console.log("Compartilhamento concluído")).catch(err=>console.error(err));}else{alert("Seu navegador não suporta compartilhamento direto. Copie o texto:\n\n"+texto);}
+}
 
+function atualizarTudo(){atualizarMotoristasUI(); atualizarLogs(); atualizarBobinasUI(); atualizarPainel();}
+</script>
 </body>
 </html>
