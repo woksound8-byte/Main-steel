@@ -53,11 +53,12 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
   </div>
 </div>
 
+<!-- BOBINAS -->
 <div class="container">
 <h2>Carregamentos</h2>
 <select id="motoristaSelect"></select>
-<input type="text" id="bobinaInput" placeholder="Código da bobina ou QR">
-<button onclick="addBobina()">Adicionar Bobina</button>
+<input type="text" id="bobinaInput" placeholder="Código da bobina ou QR (use vírgula para múltiplos)">
+<button onclick="addBobina()">Adicionar Bobina(s)</button>
 <div id="listaBobinas" class="lista"></div>
 <button onclick="finalizarCarregamento()">Finalizar Carregamento</button>
 
@@ -66,6 +67,7 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <div id="qr-reader"></div>
 </div>
 
+<!-- LOGS -->
 <div class="container">
 <h2>Logs</h2>
 <input type="date" id="dataExportacao">
@@ -77,6 +79,7 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <div id="listaLogs" class="lista"></div>
 </div>
 
+<!-- MOVIMENTAÇÃO -->
 <div class="container">
 <h2>Movimentação</h2>
 <h3>Carregamentos</h3>
@@ -89,6 +92,7 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <p>Anteontem: <strong id="bobAnteontem">0</strong></p>
 </div>
 
+<!-- ADMINISTRAÇÃO -->
 <div class="container">
 <h2>Administração</h2>
 <button onclick="resetarDadosProtegido()">Resetar Dados (Senha 1234)</button>
@@ -96,7 +100,6 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-/* ===== VARIÁVEIS ===== */
 let estado={motoristas:[],carregamentos:[]};
 let bobinasTemp=[];
 let editandoIndex=null;
@@ -106,44 +109,169 @@ let operador={nome:'',cpf:''};
 
 /* ===== LOGIN ===== */
 function fazerLogin(){
-    const nome = document.getElementById("loginNome").value.trim();
-    const cpf = document.getElementById("loginCPF").value.trim();
-    if(!nome || !cpf) return alert("Informe nome e CPF!");
-    operador = { nome, cpf };
+    const nome=document.getElementById("loginNome").value.trim();
+    const cpf=document.getElementById("loginCPF").value.trim();
+    if(!nome||!cpf) return alert("Informe nome e CPF!");
+    operador={nome,cpf};
     const dadosUsuario = localStorage.getItem(`user_${cpf}`);
-    if(dadosUsuario){
-        estado = JSON.parse(dadosUsuario);
-    } else {
-        estado = { motoristas: [], carregamentos: [] };
-    }
-    document.getElementById("loginContainer").style.display = "none";
-    document.getElementById("app").style.display = "block";
+    estado = dadosUsuario ? JSON.parse(dadosUsuario) : {motoristas:[],carregamentos:[]};
+    document.getElementById("loginContainer").style.display="none";
+    document.getElementById("app").style.display="block";
     atualizarTudo();
 }
 
 /* ===== SALVAR ===== */
-function salvar(){if(!operador.cpf) return; localStorage.setItem(`user_${operador.cpf}`, JSON.stringify(estado));}
-function formatarDataHora(dataISO){const d=new Date(dataISO); return { data: d.toLocaleDateString("pt-BR"), hora: d.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}) }; }
+function salvar(){if(!operador.cpf) return; localStorage.setItem(`user_${operador.cpf}`,JSON.stringify(estado));}
+function formatarDataHora(dataISO){const d=new Date(dataISO); return {data:d.toLocaleDateString("pt-BR"), hora:d.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'})};}
 function formatarData(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');}
 function extrairCodigo(input){try{let url=new URL(input);return (url.searchParams.get("pO")||input).trim().toUpperCase();}catch{return input.trim().toUpperCase();}}
 
+/* ===== MOTORISTAS ===== */
+function addMotorista(){const nome=document.getElementById("motoristaInput").value.trim();if(!nome)return alert("Digite nome válido.");if(estado.motoristas.includes(nome))return alert("Motorista já existe.");estado.motoristas.push(nome);document.getElementById("motoristaInput").value="";salvar();atualizarTudo();}
+function excluirMotorista(nome){if(estado.carregamentos.some(c=>c.motorista===nome))return alert("Motorista possui carregamentos.");if(!confirm("Excluir motorista?"))return;estado.motoristas=estado.motoristas.filter(m=>m!==nome);salvar();atualizarTudo();}
+function atualizarMotoristasUI(){const lista=document.getElementById("listaMotoristas"),select=document.getElementById("motoristaSelect"),filtro=document.getElementById("filtroMotorista");lista.innerHTML="";select.innerHTML="";filtro.innerHTML='<option value="">Todos os motoristas</option>';estado.motoristas.forEach(m=>{lista.innerHTML+=`<div class="log-item"><span>${m}</span><button class="delete-btn" onclick="excluirMotorista('${m}')">X</button></div>`;select.innerHTML+=`<option value="${m}">${m}</option>`;filtro.innerHTML+=`<option value="${m}">${m}</option>`;});}
+
+/* ===== BOBINAS ===== */
+function addBobina(){
+    let input=document.getElementById("bobinaInput").value.trim();
+    if(!input) return alert("Digite código válido.");
+    const entradas=input.split(",").map(c=>extrairCodigo(c.trim())).filter(c=>c);
+    entradas.forEach(codigo=>{
+        if(!bobinasTemp.some(b=>b.codigo===codigo)) bobinasTemp.push({codigo,lote:"",obs:""});
+    });
+    document.getElementById("bobinaInput").value="";
+    atualizarBobinasUI();
+}
+
+function atualizarBobinasUI(){
+    const lista=document.getElementById("listaBobinas");
+    lista.innerHTML="";
+    bobinasTemp.forEach((b,i)=>{
+        lista.innerHTML+=`
+        <div class="log-item">
+            <span style="flex:1">${b.codigo}</span>
+            <input type="text" placeholder="Lote" value="${b.lote}" onchange="bobinasTemp[${i}].lote=this.value" style="width:80px;margin-right:5px">
+            <input type="text" placeholder="Obs" value="${b.obs}" onchange="bobinasTemp[${i}].obs=this.value" style="flex:1;margin-right:5px">
+            <button class="delete-btn" onclick="removerBobinaTemp(${i})">X</button>
+        </div>`;
+    });
+}
+function removerBobinaTemp(i){bobinasTemp.splice(i,1);atualizarBobinasUI();}
+
+/* ===== CARREGAMENTOS ===== */
+function finalizarCarregamento(){
+    const motorista=document.getElementById("motoristaSelect").value;
+    if(!motorista) return alert("Selecione motorista.");
+    if(bobinasTemp.length===0) return alert("Adicione bobinas.");
+    const registro={motorista,data:new Date().toISOString(),bobinas:[...bobinasTemp],operador:{...operador}};
+    if(editandoIndex!==null){estado.carregamentos[editandoIndex]=registro;editandoIndex=null;}
+    else{estado.carregamentos.push(registro);}
+    bobinasTemp=[];
+    salvar();
+    atualizarTudo();
+}
+
+/* ===== LOGS ===== */
+function atualizarLogs(){
+    const lista=document.getElementById("listaLogs");
+    const filtro=document.getElementById("filtroMotorista").value;
+    lista.innerHTML="";
+    let filtrados = estado.carregamentos;
+    if(filtro) filtrados = filtrados.filter(c => c.motorista===filtro);
+    filtrados.forEach((c,i)=>{
+        const {data,hora}=formatarDataHora(c.data);
+        let texto=`${i+1}º | ${c.motorista} | ${c.bobinas.map(b=>b.codigo).join(", ")} | ${data} ${hora}`;
+        const indexOriginal = estado.carregamentos.indexOf(c);
+        lista.innerHTML+=`<div class="log-item"><span style="flex:1; cursor:pointer" onclick="abrirCarregamento(${indexOriginal})">${texto}</span><button class="delete-btn" onclick="excluirCarregamento(${indexOriginal})">X</button></div>`;
+    });
+}
+
+/* ===== ABRIR / EXCLUIR CARREGAMENTO ===== */
+function abrirCarregamento(i){
+    const c=estado.carregamentos[i];
+    editandoIndex=i;
+    bobinasTemp=[...c.bobinas];
+    document.getElementById("motoristaSelect").value=c.motorista;
+    atualizarBobinasUI();
+}
+function excluirCarregamento(i){if(!confirm("Excluir carregamento?"))return;estado.carregamentos.splice(i,1);salvar();atualizarTudo();}
+
+/* ===== PAINEL ===== */
+function atualizarPainel(){
+    const hoje=new Date();
+    const ontem=new Date();ontem.setDate(hoje.getDate()-1);
+    const anteontem=new Date();anteontem.setDate(hoje.getDate()-2);
+    function contar(data){
+        const chave=formatarData(data);
+        let car=0,bob=0;
+        estado.carregamentos.forEach(c=>{
+            if(formatarData(new Date(c.data))===chave){car++;bob+=c.bobinas.length;}
+        });
+        return {car,bob};
+    }
+    let h=contar(hoje),o=contar(ontem),a=contar(anteontem);
+    carHoje.innerText=h.car;carOntem.innerText=o.car;carAnteontem.innerText=a.car;
+    bobHoje.innerText=h.bob;bobOntem.innerText=o.bob;bobAnteontem.innerText=a.bob;
+}
+
+/* ===== QR ===== */
+function iniciarQR(){
+    if(!html5QrCode) html5QrCode=new Html5Qrcode("qr-reader");
+    html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},
+        msg=>{
+            const codigo = extrairCodigo(msg);
+            const input = document.getElementById("bobinaInput");
+            let valores = input.value.split(",").map(v=>v.trim()).filter(v=>v);
+            if(!valores.includes(codigo)) valores.push(codigo);
+            input.value = valores.join(", ");
+            toggleCamera();
+        }
+    );
+}
+function toggleCamera(){const reader=document.getElementById("qr-reader");if(camAberta){html5QrCode.stop().then(()=>{reader.style.display="none";camAberta=false});}else{reader.style.display="block";iniciarQR();camAberta=true;}}
+
+/* ===== RESET ===== */
+function resetarDadosProtegido(){
+    const senha=prompt("Senha:");
+    if(senha!=="1234") return alert("Senha incorreta.");
+    localStorage.removeItem(`user_${operador.cpf}`);
+    estado={motoristas:[],carregamentos:[]};
+    bobinasTemp=[];
+    editandoIndex=null;
+    atualizarTudo();
+}
+
+/* ===== MOTORISTAS MINIMIZÁVEL ===== */
+function toggleMotoristas(){
+    const content=document.getElementById("motoristasContent");
+    const btn=content.previousElementSibling.querySelector("button");
+    if(content.style.maxHeight===""||content.style.maxHeight==="0px"){content.style.maxHeight=content.scrollHeight+"px";btn.innerText="-";} 
+    else{content.style.maxHeight="0px";btn.innerText="+";}
+}
+
+function atualizarTudo(){atualizarMotoristasUI();atualizarLogs();atualizarBobinasUI();atualizarPainel();}
+
 /* ===== EXPORTAR E COMPARTILHAR ===== */
 function exportarLogsPorDia(){
-    const dataSelecionada = document.getElementById("dataExportacao").value;
+    const dataSelecionada=document.getElementById("dataExportacao").value;
     if(!dataSelecionada) return alert("Selecione uma data.");
-    const logsFiltrados = estado.carregamentos.filter(c => formatarData(new Date(c.data))===dataSelecionada);
+    const logsFiltrados=estado.carregamentos.filter(c=>formatarData(new Date(c.data))===dataSelecionada);
     if(logsFiltrados.length===0) return alert("Nenhum log encontrado.");
-    let texto = "TRACKOPS - CONTROLE OPERACIONAL\n";
-    texto += "Data: "+dataSelecionada+"\n";
-    texto += `Operador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
+    
+    let texto = `TRACKOPS - CONTROLE OPERACIONAL\nData: ${dataSelecionada}\nOperador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
     texto += "------------------------------------\n\n";
+    
     logsFiltrados.forEach((c,i)=>{
-        const { hora } = formatarDataHora(c.data);
-        const motorista = c.motorista.normalize("NFC");
-        const bobinas = c.bobinas.map(b => b.normalize("NFC")).join(", ");
-        texto += `${i+1}º Registro\nMotorista: ${motorista}\nBobinas: ${bobinas}\nHorário: ${hora}\n------------------------------------\n\n`;
+        const dh = formatarDataHora(c.data);
+        texto += `${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.map(b=>b.codigo).join(", ")}`;
+        c.bobinas.forEach(b=>{
+            if(b.lote) texto += `\nLote: ${b.lote}`;
+            if(b.obs) texto += `\nObs: ${b.obs}`;
+        });
+        texto += `\nHorário: ${dh.data} ${dh.hora}\n------------------------------------\n\n`;
     });
-    const blob = new Blob([texto], {type:"text/plain;charset=utf-8"});
+    
+    const blob = new Blob([texto],{type:"text/plain;charset=utf-8"});
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `logs_${dataSelecionada}.txt`;
@@ -153,54 +281,27 @@ function exportarLogsPorDia(){
 }
 
 function compartilharLogs(){
-    let logsFiltrados = estado.carregamentos;
-    const filtro = document.getElementById("filtroMotorista").value;
-    if(filtro) logsFiltrados = logsFiltrados.filter(c => c.motorista === filtro);
+    let logsFiltrados=estado.carregamentos;
+    const filtro=document.getElementById("filtroMotorista").value;
+    if(filtro) logsFiltrados=logsFiltrados.filter(c=>c.motorista===filtro);
     if(logsFiltrados.length===0) return alert("Nenhum log para compartilhar.");
-    let texto = "TRACKOPS - CONTROLE OPERACIONAL\n";
-    texto += `Operador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
-    texto += "------------------------------------\n\n";
+    let texto="TRACKOPS - CONTROLE OPERACIONAL\n";
+    texto+=`Operador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
+    texto+="------------------------------------\n\n";
     logsFiltrados.forEach((c,i)=>{
-        const { data, hora } = formatarDataHora(c.data);
-        texto += `${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.join(", ")}\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
+        const {data,hora}=formatarDataHora(c.data);
+        texto+=`${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.map(b=>b.codigo).join(", ")}`;
+        c.bobinas.forEach(b=>{
+            if(b.lote) texto += `\nLote: ${b.lote}`;
+            if(b.obs) texto += `\nObs: ${b.obs}`;
+        });
+        texto += `\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
     });
     if(navigator.share){
-        navigator.share({title: "Logs TrackOps", text: texto})
-            .then(() => console.log("Compartilhamento concluído"))
-            .catch(err => console.error("Erro ao compartilhar:", err));
-    } else {
-        alert("Seu navegador não suporta compartilhamento direto. Copie o texto:\n\n" + texto);
-    }
-}
-
-/* ===== FUNÇÕES PRINCIPAIS ===== */
-function addMotorista(){const nome=document.getElementById("motoristaInput").value.trim();if(!nome)return alert("Digite nome válido.");if(estado.motoristas.includes(nome))return alert("Motorista já existe.");estado.motoristas.push(nome);document.getElementById("motoristaInput").value="";salvar();atualizarTudo();}
-function excluirMotorista(nome){if(estado.carregamentos.some(c=>c.motorista===nome))return alert("Motorista possui carregamentos.");if(!confirm("Excluir motorista?"))return;estado.motoristas=estado.motoristas.filter(m=>m!==nome);salvar();atualizarTudo();}
-function atualizarMotoristasUI(){const lista=document.getElementById("listaMotoristas"),select=document.getElementById("motoristaSelect"),filtro=document.getElementById("filtroMotorista");lista.innerHTML="";select.innerHTML="";filtro.innerHTML='<option value="">Todos os motoristas</option>';estado.motoristas.forEach(m=>{lista.innerHTML+=`<div class="log-item"><span>${m}</span><button class="delete-btn" onclick="excluirMotorista('${m}')">X</button></div>`;select.innerHTML+=`<option value="${m}">${m}</option>`;filtro.innerHTML+=`<option value="${m}">${m}</option>`;});}
-function addBobina(){let input=document.getElementById("bobinaInput").value.trim();if(!input)return alert("Digite código válido.");let codigo=extrairCodigo(input);if(bobinasTemp.includes(codigo))return alert("Bobina já adicionada.");bobinasTemp.push(codigo);document.getElementById("bobinaInput").value="";atualizarBobinasUI();}
-function atualizarBobinasUI(){const lista=document.getElementById("listaBobinas");lista.innerHTML="";bobinasTemp.forEach((b,i)=>{lista.innerHTML+=`${b} <button class="delete-btn" onclick="removerBobinaTemp(${i})">X</button><br>`;});}
-function removerBobinaTemp(i){bobinasTemp.splice(i,1);atualizarBobinasUI();}
-function finalizarCarregamento(){const motorista=document.getElementById("motoristaSelect").value;if(!motorista)return alert("Selecione motorista.");if(bobinasTemp.length===0)return alert("Adicione bobinas.");const registro={motorista,data:new Date().toISOString(),bobinas:[...bobinasTemp],operador:{...operador}};if(editandoIndex!==null){estado.carregamentos[editandoIndex]=registro;editandoIndex=null;}else{estado.carregamentos.push(registro);}bobinasTemp=[];salvar();atualizarTudo();}
-function atualizarLogs(){const lista=document.getElementById("listaLogs");const filtro=document.getElementById("filtroMotorista").value;lista.innerHTML="";let filtrados=estado.carregamentos.filter(c=>!filtro||c.motorista===filtro);filtrados.forEach((c,i)=>{const {data,hora}=formatarDataHora(c.data);const texto=`${i+1}º | ${c.motorista} | ${c.bobinas.join(", ")} | ${data} ${hora}`;const indexOriginal=estado.carregamentos.indexOf(c);lista.innerHTML+=`<div class="log-item"><span onclick="abrirCarregamento(${indexOriginal})">${texto}</span><button class="delete-btn" onclick="excluirCarregamento(${indexOriginal})">X</button></div>`;});}
-function abrirCarregamento(i){const c=estado.carregamentos[i];editandoIndex=i;bobinasTemp=[...c.bobinas];document.getElementById("motoristaSelect").value=c.motorista;atualizarBobinasUI();}
-function excluirCarregamento(i){if(!confirm("Excluir carregamento?"))return;estado.carregamentos.splice(i,1);salvar();atualizarTudo();}
-function atualizarPainel(){const hoje=new Date();const ontem=new Date();ontem.setDate(hoje.getDate()-1);const anteontem=new Date();anteontem.setDate(hoje.getDate()-2);function contar(data){const chave=formatarData(data);let car=0,bob=0;estado.carregamentos.forEach(c=>{if(formatarData(new Date(c.data))===chave){car++;bob+=c.bobinas.length;}});return {car,bob};}let h=contar(hoje),o=contar(ontem),a=contar(anteontem);carHoje.innerText=h.car;carOntem.innerText=o.car;carAnteontem.innerText=a.car;bobHoje.innerText=h.bob;bobOntem.innerText=o.bob;bobAnteontem.innerText=a.bob;}
-function iniciarQR(){if(!html5QrCode)html5QrCode=new Html5Qrcode("qr-reader");html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},msg=>{document.getElementById("bobinaInput").value=extrairCodigo(msg);toggleCamera();});}
-function toggleCamera(){const reader=document.getElementById("qr-reader");if(camAberta){html5QrCode.stop().then(()=>{reader.style.display="none";camAberta=false});}else{reader.style.display="block";iniciarQR();camAberta=true;}}
-function resetarDadosProtegido(){const senha=prompt("Senha:");if(senha!=="1234")return alert("Senha incorreta.");localStorage.removeItem(`user_${operador.cpf}`);estado={motoristas:[],carregamentos:[]};bobinasTemp=[];editandoIndex=null;atualizarTudo();}
-function atualizarTudo(){atualizarMotoristasUI();atualizarLogs();atualizarBobinasUI();atualizarPainel();}
-
-/* ===== MOTORISTAS MINIMIZÁVEL ===== */
-function toggleMotoristas(){
-    const content = document.getElementById("motoristasContent");
-    const btn = content.previousElementSibling.querySelector("button");
-    if(content.style.maxHeight === "0px" || content.style.maxHeight === ""){
-        content.style.maxHeight = content.scrollHeight + "px";
-        btn.innerText = "-";
-    } else {
-        content.style.maxHeight = "0px";
-        btn.innerText = "+";
-    }
+        navigator.share({title:"Logs TrackOps", text:texto})
+            .then(()=>console.log("Compartilhamento concluído"))
+            .catch(err=>console.error("Erro ao compartilhar:",err));
+    }else{alert("Seu navegador não suporta compartilhamento direto. Copie o texto:\n\n"+texto);}
 }
 </script>
 
