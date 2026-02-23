@@ -37,11 +37,20 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <div id="app" style="display:none;">
 <h1>Controle Operacional</h1>
 
-<div class="container">
-<h2>Motoristas</h2>
-<input type="text" id="motoristaInput" placeholder="Nome do motorista">
-<button onclick="addMotorista()">Adicionar</button>
-<div id="listaMotoristas" class="lista"></div>
+<!-- Motoristas Minimizável -->
+<div class="container" id="motoristasContainer">
+  <h2>
+    Motoristas
+    <button onclick="toggleMotoristas()" 
+            style="float:right; background:#2D6A4F; border:none; color:#fff; border-radius:50%; width:24px; height:24px; cursor:pointer; font-weight:bold; line-height:20px; text-align:center; padding:0;">
+      -
+    </button>
+  </h2>
+  <div id="motoristasContent" style="overflow:hidden; transition: max-height 0.3s ease; max-height:500px;">
+    <input type="text" id="motoristaInput" placeholder="Nome do motorista">
+    <button onclick="addMotorista()">Adicionar</button>
+    <div id="listaMotoristas" class="lista"></div>
+  </div>
 </div>
 
 <div class="container">
@@ -101,52 +110,39 @@ function fazerLogin(){
     const cpf = document.getElementById("loginCPF").value.trim();
     if(!nome || !cpf) return alert("Informe nome e CPF!");
     operador = { nome, cpf };
-
-    // Carregar dados do usuário se existir
     const dadosUsuario = localStorage.getItem(`user_${cpf}`);
     if(dadosUsuario){
         estado = JSON.parse(dadosUsuario);
     } else {
         estado = { motoristas: [], carregamentos: [] };
     }
-
     document.getElementById("loginContainer").style.display = "none";
     document.getElementById("app").style.display = "block";
     atualizarTudo();
 }
 
-/* ===== SALVAR/CARREGAR ===== */
-function salvar(){
-    if(!operador.cpf) return;
-    localStorage.setItem(`user_${operador.cpf}`, JSON.stringify(estado));
-}
-function formatarDataHora(dataISO){
-    const d = new Date(dataISO);
-    return { data: d.toLocaleDateString("pt-BR"), hora: d.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}) };
-}
+/* ===== SALVAR ===== */
+function salvar(){if(!operador.cpf) return; localStorage.setItem(`user_${operador.cpf}`, JSON.stringify(estado));}
+function formatarDataHora(dataISO){const d=new Date(dataISO); return { data: d.toLocaleDateString("pt-BR"), hora: d.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}) }; }
 function formatarData(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');}
 function extrairCodigo(input){try{let url=new URL(input);return (url.searchParams.get("pO")||input).trim().toUpperCase();}catch{return input.trim().toUpperCase();}}
 
-/* ===== EXPORTAR TXT ===== */
+/* ===== EXPORTAR E COMPARTILHAR ===== */
 function exportarLogsPorDia(){
     const dataSelecionada = document.getElementById("dataExportacao").value;
     if(!dataSelecionada) return alert("Selecione uma data.");
-
     const logsFiltrados = estado.carregamentos.filter(c => formatarData(new Date(c.data))===dataSelecionada);
     if(logsFiltrados.length===0) return alert("Nenhum log encontrado.");
-
     let texto = "TRACKOPS - CONTROLE OPERACIONAL\n";
     texto += "Data: "+dataSelecionada+"\n";
     texto += `Operador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
     texto += "------------------------------------\n\n";
-
     logsFiltrados.forEach((c,i)=>{
         const { hora } = formatarDataHora(c.data);
         const motorista = c.motorista.normalize("NFC");
         const bobinas = c.bobinas.map(b => b.normalize("NFC")).join(", ");
         texto += `${i+1}º Registro\nMotorista: ${motorista}\nBobinas: ${bobinas}\nHorário: ${hora}\n------------------------------------\n\n`;
     });
-
     const blob = new Blob([texto], {type:"text/plain;charset=utf-8"});
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -156,22 +152,18 @@ function exportarLogsPorDia(){
     document.body.removeChild(link);
 }
 
-/* ===== COMPARTILHAR LOGS ===== */
 function compartilharLogs(){
     let logsFiltrados = estado.carregamentos;
     const filtro = document.getElementById("filtroMotorista").value;
     if(filtro) logsFiltrados = logsFiltrados.filter(c => c.motorista === filtro);
     if(logsFiltrados.length===0) return alert("Nenhum log para compartilhar.");
-
     let texto = "TRACKOPS - CONTROLE OPERACIONAL\n";
     texto += `Operador: ${operador.nome}\nCPF: ${operador.cpf}\n`;
     texto += "------------------------------------\n\n";
-
     logsFiltrados.forEach((c,i)=>{
         const { data, hora } = formatarDataHora(c.data);
         texto += `${i+1}º Registro\nMotorista: ${c.motorista}\nBobinas: ${c.bobinas.join(", ")}\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
     });
-
     if(navigator.share){
         navigator.share({title: "Logs TrackOps", text: texto})
             .then(() => console.log("Compartilhamento concluído"))
@@ -197,6 +189,19 @@ function iniciarQR(){if(!html5QrCode)html5QrCode=new Html5Qrcode("qr-reader");ht
 function toggleCamera(){const reader=document.getElementById("qr-reader");if(camAberta){html5QrCode.stop().then(()=>{reader.style.display="none";camAberta=false});}else{reader.style.display="block";iniciarQR();camAberta=true;}}
 function resetarDadosProtegido(){const senha=prompt("Senha:");if(senha!=="1234")return alert("Senha incorreta.");localStorage.removeItem(`user_${operador.cpf}`);estado={motoristas:[],carregamentos:[]};bobinasTemp=[];editandoIndex=null;atualizarTudo();}
 function atualizarTudo(){atualizarMotoristasUI();atualizarLogs();atualizarBobinasUI();atualizarPainel();}
+
+/* ===== MOTORISTAS MINIMIZÁVEL ===== */
+function toggleMotoristas(){
+    const content = document.getElementById("motoristasContent");
+    const btn = content.previousElementSibling.querySelector("button");
+    if(content.style.maxHeight === "0px" || content.style.maxHeight === ""){
+        content.style.maxHeight = content.scrollHeight + "px";
+        btn.innerText = "-";
+    } else {
+        content.style.maxHeight = "0px";
+        btn.innerText = "+";
+    }
+}
 </script>
 
 </body>
