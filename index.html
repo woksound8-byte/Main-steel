@@ -10,7 +10,7 @@ h1{text-align:center;font-weight:600;letter-spacing:1px;margin-bottom:25px;}
 h2{border-bottom:1px solid #2A2A2A;padding-bottom:6px;margin-bottom:15px;font-size:18px;color:#8BC34A;text-transform:uppercase;}
 h3{color:#BDBDBD;font-size:15px;margin-bottom:8px;}
 input,select{width:100%;padding:10px;margin:8px 0;background:#1A1A1A;border:1px solid #2A2A2A;color:#EAEAEA;font-size:15px;border-radius:4px;box-sizing:border-box;}
-input:focus,select:focus{outline:none;border-color:#2D6A4F;}
+input:focus,select:focus{outline:none;border-color:#2D6A4F;background:#1A1A1A;color:#EAEAEA;}
 button{background:#2D6A4F;color:#fff;border:1px solid #2D6A4F;padding:8px 14px;margin-top:6px;cursor:pointer;font-size:14px;border-radius:4px;text-transform:uppercase;}
 button:hover{background:#1B4332;}
 button.delete-btn{background:#7A1E1E;border:1px solid #7A1E1E;padding:4px 8px;font-size:12px;border-radius:3px;width:auto;}
@@ -31,7 +31,7 @@ div.container{background:#1A1A1A;padding:15px;margin-bottom:20px;border:1px soli
 <div id="loginContainer">
 <h1>Login Operador</h1>
 <input type="text" id="loginNome" placeholder="Nome completo">
-<input type="text" id="loginCPF" placeholder="CPF (somente números)">
+<input type="password" id="loginCPF" placeholder="CPF (somente números)">
 <button onclick="fazerLogin()">Entrar</button>
 </div>
 
@@ -215,10 +215,21 @@ function iniciarQR(){
             if(!valores.includes(codigo)) valores.push(codigo);
             campoAtivo.value = valores.join(", ");
             campoAtivo.onchange?.();
+            // fecha a câmera imediatamente após detectar
+            toggleCamera();
         }
     });
 }
-function toggleCamera(){const reader=document.getElementById("qr-reader");if(camAberta){html5QrCode.stop().then(()=>{reader.style.display="none";camAberta=false});}else{reader.style.display="block";iniciarQR();camAberta=true;}}
+function toggleCamera(){
+    const reader=document.getElementById("qr-reader");
+    if(camAberta){
+        html5QrCode.stop().then(()=>{reader.style.display="none";camAberta=false;});
+    }else{
+        reader.style.display="block";
+        iniciarQR();
+        camAberta=true;
+    }
+}
 
 /* ===== RESET ===== */
 function resetarDadosProtegido(){const senha=prompt("Senha:");if(senha!=="1234") return alert("Senha incorreta."); localStorage.removeItem(`user_${operador.cpf}`); estado={motoristas:[],carregamentos:[]}; bobinasTemp=[]; editandoIndex=null; atualizarTudo();}
@@ -239,7 +250,13 @@ function exportarLogsPorDia(){
         c.bobinas.forEach(b=>{if(b.lote) texto+=`\nLote: ${b.lote}`; if(b.obs) texto+=`\nObs: ${b.obs}`;});
         texto+=`\nHorário: ${data} ${hora}\n------------------------------------\n\n`;
     });
-    const blob=new Blob([texto],{type:"text/plain;charset=utf-8"}); const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`logs_${dataSelecionada}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    const blob=new Blob([texto],{type:"text/plain;charset=utf-8"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=`logs_${dataSelecionada}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 function compartilharLogs(){
     let logs=estado.carregamentos;
